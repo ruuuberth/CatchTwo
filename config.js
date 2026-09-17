@@ -29,6 +29,18 @@ const config = {
     OwnerIDs: ["1101294362505269379", "..."], // List of owner IDs
     CommandPrefix: "!" // Prefix for commands
   },
+  // Capture policy
+  capturePolicy: {
+    servers: {
+      // "SERVER_ID": {
+      //   channels: {
+      //     "CHANNEL_ID": {
+      //       blacklist: ["pikachu", "magikarp"]
+      //     }
+      //   }
+      // }
+    }
+  },
   // Global settings
   globalSettings: {
     GlobalCatch: false, // Enable or disable global catching
