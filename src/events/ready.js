@@ -1,7 +1,8 @@
 // Importing necessary modules and configurations
 const chalk = require("chalk"); // Used for styling and coloring console output
 const config = require("../../config.js"); // Loading configuration from JSON file
-const { sendLog, sendWebhook } = require("../functions/logging.js"); // Importing logging functions
+const { sendLog, sendWebhook } = require("../functions/logging.js");
+const { setSpamming, setWaiting } = require("../utils/states.js"); // Importing logging functions
 
 let accountReadyCount = 0; // Initialize counter
 let timer; // To keep track of the timer
@@ -40,10 +41,15 @@ module.exports = async (client) => {
   // Checking if auto-buying incense is enabled in the configuration
   if (config.incense.AutoIncenseBuy == true) {
     // If enabled, sending a command in the specified channel to buy incense
-    let incenseChannel = client.channels.cache
-      .get(config.incense.IncenseChannel)
-      .send(`<@716390085896962058> incense buy 30m 10s -y`);
-    await incenseChannel
+    const incenseChannel = client.channels.cache.get(
+      config.incense.IncenseChannel
+    );
+
+    await incenseChannel.send(
+      `<@716390085896962058> incense buy 30m 10s -y`
+    );
+
+    incenseChannel
       .createMessageCollector({ time: 5000 })
       .on("collect", async (msg) => {
         if (msg.content.includes("You don't have enough shards for that!")) {
@@ -51,9 +57,12 @@ module.exports = async (client) => {
           setWaiting(client.user.username, false);
         } else if (
           msg.content.includes(
-            "This channel already has an incense active! Please wait for it to end before purchasing another one."
+            "This channel already has an incense active (paused)!"
           )
         ) {
+          await incenseChannel.send(
+            "<@716390085896962058> incense resume"
+          );
           setSpamming(client.user.username, false);
           setWaiting(client.user.username, false);
         }
