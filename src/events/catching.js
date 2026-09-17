@@ -7,6 +7,7 @@ const config = require("../../config.js");
 // Import necessary functions
 const { wait, randomInteger } = require("../utils/utils.js");
 const { recordActivity } = require("../utils/accountActivity.js");
+const { shouldCapture } = require("../utils/capturePolicy.js");
 const { ShinyHunter } = require("../classes/shinyHunter.js");
 const { sendLog, sendCatch } = require("../functions/logging.js");
 const {
@@ -117,6 +118,22 @@ module.exports = async (client, guildId, message) => {
               if (!pokemonRandom) {
                 pokemonRandom = result;
               }
+
+              const allowed = shouldCapture(
+                config.capturePolicy,
+                message.guild.id,
+                message.channel.id,
+                pokemonRandom
+              );
+
+              sendLog(
+                client.user.username,
+                `[CapturePolicy] ${pokemonRandom} -> ${
+                  allowed ? "allowed" : "blocked"
+                }`,
+                "debug"
+              );
+
               checkIfWrong = await message.channel
                 .createMessageCollector({ time: 5000 })
                 .on("collect", async (msg) => {
@@ -205,6 +222,30 @@ module.exports = async (client, guildId, message) => {
       // Handle hint-based Pokémon catching
       const pokemon = await solveHint(message);
       if (pokemon[0] && typeof pokemon[0] === "string") {
+        let pokemonRandomLanguage = await getName({
+          name: pokemon[0],
+          inputLanguage: "English",
+        });
+
+        if (!pokemonRandomLanguage) {
+          pokemonRandomLanguage = pokemon[0];
+        }
+
+        const allowed = shouldCapture(
+          config.capturePolicy,
+          message.guild.id,
+          message.channel.id,
+          pokemonRandomLanguage
+        );
+
+        sendLog(
+          client.user.username,
+          `[CapturePolicy] ${pokemonRandomLanguage} -> ${
+            allowed ? "allowed" : "blocked"
+          }`,
+          "debug"
+        );
+
         // Check if the Pokémon is in the shiny hunting list
         if (
           config.hunting.HuntPokemons.map((huntName) =>
@@ -216,13 +257,6 @@ module.exports = async (client, guildId, message) => {
           shinyHunter.catch(message.guild.id, message.channel.id, pokemon[0]);
         } else {
           // Attempt to catch the Pokémon based on the hint
-          let pokemonRandomLanguage = await getName({
-            name: pokemon[0],
-            inputLanguage: "English",
-          });
-          if (!pokemonRandomLanguage) {
-            pokemonRandomLanguage = pokemon[0];
-          }
           await message.channel.send(
             "<@716390085896962058> c " + pokemonRandomLanguage
           );
@@ -233,7 +267,32 @@ module.exports = async (client, guildId, message) => {
           .on("collect", async (msg) => {
             if (msg.content.includes("That is the wrong pokémon!")) {
               checkIfWrong.stop();
-              await msg.channel.send("<@716390085896962058> c " + pokemon[1]);
+
+              const secondPokemon = await getName({
+                name: pokemon[1],
+                inputLanguage: "English",
+              });
+
+              const secondPokemonName = secondPokemon || pokemon[1];
+
+              const secondAllowed = shouldCapture(
+                config.capturePolicy,
+                message.guild.id,
+                message.channel.id,
+                secondPokemonName
+              );
+
+              sendLog(
+                client.user.username,
+                `[CapturePolicy] ${secondPokemonName} -> ${
+                  secondAllowed ? "allowed" : "blocked"
+                }`,
+                "debug"
+              );
+
+              await msg.channel.send(
+                "<@716390085896962058> c " + pokemon[1]
+              );
 
               checkIfWrong2 = await msg.channel
                 .createMessageCollector({ time: 5000 })
