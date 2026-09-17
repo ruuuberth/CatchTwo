@@ -6,6 +6,7 @@ const config = require("../../config.js");
 
 // Import necessary functions
 const { wait, randomInteger } = require("../utils/utils.js");
+const { recordActivity } = require("../utils/accountActivity.js");
 const { ShinyHunter } = require("../classes/shinyHunter.js");
 const { sendLog, sendCatch } = require("../functions/logging.js");
 const {
@@ -284,6 +285,8 @@ module.exports = async (client, guildId, message) => {
         "Congratulations <@" + client.user.id + ">! You caught"
       )
     ) {
+      recordActivity(client.user.id);
+
       // Log successful catches
       if (config.logging.LogCatches) {
         let match = message.content.match(
