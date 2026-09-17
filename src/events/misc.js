@@ -261,9 +261,10 @@ module.exports = async (client, guildId, message) => {
     const newMessage = Array.from(messages.values());
 
     if (
-      newMessage[1].author.id == client.user.id ||
-      (newMessage[1].author.id == "716390085896962058" &&
-        newMessage[1].content.includes(client.user.id))
+      newMessage[1] &&
+      (newMessage[1].author.id == client.user.id ||
+        (newMessage[1].author.id == "716390085896962058" &&
+          newMessage[1].content.includes(client.user.id)))
     ) {
       if (message.content.includes(`You have completed the quest`)) {
         // Extract amount of pokemon caught using regex
