@@ -14,7 +14,8 @@ const {
   getSpamming,
   getWaiting,
 } = require("../utils/states.js");
-const tf = require("@tensorflow/tfjs-node");
+const tf = require("@tensorflow/tfjs");
+const { loadLocalLayersModel } = require("../utils/tfModel.js");
 const sharp = require("sharp");
 const data = require("../data/ai.json");
 const axios = require("axios");
@@ -25,7 +26,7 @@ let hintMessages = ["h", "hint"];
 
 async function predict(url) {
   if (!model) {
-    model = await tf.loadLayersModel("file://./src/data/model/model.json");
+    model = await loadLocalLayersModel(require("path").resolve("./src/data/model/model.json"));
   }
   let startTime = new Date().getTime();
   const imageTensor = await preprocessImage(url);
@@ -51,9 +52,14 @@ async function preprocessImage(url) {
   });
   const imageBuffer = await sharp(Buffer.from(response.data))
     .resize(64, 64)
+    .removeAlpha()
+    .raw()
     .toBuffer();
 
-  const imageTensor = tf.divNoNan(tf.node.decodeImage(imageBuffer, 3), 255);
+  const imageTensor = tf.divNoNan(
+    tf.tensor3d(new Uint8Array(imageBuffer), [64, 64, 3]),
+    255
+  );
 
   const expandedTensor = tf.expandDims(imageTensor, 0);
 

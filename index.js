@@ -1,9 +1,8 @@
 
 // Importing necessary functions
-const tf = require("@tensorflow/tfjs-node");
 const { createCatchers } = require("./src/functions/createCatchers.js");
 const { sendLog, sendWebhook } = require("./src/functions/logging.js");
-const { logMemoryUsage, memoryUsage } = require("./src/utils/utils.js");
+const { logMemoryUsage } = require("./src/utils/utils.js");
 
 // Importing necessary modules
 const chalk = require("chalk");
