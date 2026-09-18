@@ -18,6 +18,9 @@ const {
 } = require("../utils/states.js");
 const tf = require("@tensorflow/tfjs");
 const { loadLocalLayersModel } = require("../utils/tfModel.js");
+const {
+  canonicalizeAiPokemonName,
+} = require("../utils/aiPokemonNames.js");
 const sharp = require("sharp");
 const data = require("../data/ai.json");
 const axios = require("axios");
@@ -38,13 +41,14 @@ async function predict(url) {
 
   const keys = Object.keys(data); // Get all keys from the data object
   const name = keys[predictedIndex]; // Get the key name at the specified index
+  const canonicalName = await canonicalizeAiPokemonName(name);
 
   sendLog(
     null,
     "AI prediction took " + (new Date().getTime() - startTime) + "ms.",
     "debug"
   );
-  return name;
+  return canonicalName;
 }
 
 async function preprocessImage(url) {
@@ -99,25 +103,22 @@ module.exports = async (client, guildId, message) => {
         );
         predict(message.embeds[0].image.url)
           .then(async (result) => {
-            if (config.hunting.HuntPokemons.includes(result.split("\r\n")[0])) {
+            if (
+              config.hunting.HuntPokemons.some(
+                (huntName) =>
+                  String(huntName).trim().toLowerCase() ===
+                  String(result).trim().toLowerCase()
+              )
+            ) {
               const shinyHunter = new ShinyHunter(config.hunting.HuntToken);
               shinyHunter.login();
               shinyHunter.catch(
                 message.guild.id,
                 message.channel.id,
-                await getName({
-                  name: result.split("\r\n")[0],
-                  inputLanguage: "English",
-                })
+                result
               );
             } else if (result[0] && typeof result[0] === "string") {
-              let pokemonRandom = await getName({
-                name: result.split("\r\n")[0],
-                inputLanguage: "English",
-              });
-              if (!pokemonRandom) {
-                pokemonRandom = result;
-              }
+              const pokemonRandom = result;
 
               const allowed = shouldCapture(
                 config.capturePolicy,
