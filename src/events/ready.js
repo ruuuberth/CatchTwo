@@ -3,12 +3,15 @@ const chalk = require("chalk"); // Used for styling and coloring console output
 const config = require("../../config.js"); // Loading configuration from JSON file
 const { sendLog, sendWebhook } = require("../functions/logging.js");
 const { setSpamming, setWaiting } = require("../utils/states.js"); // Importing logging functions
-
 let accountReadyCount = 0; // Initialize counter
 let timer; // To keep track of the timer
 
 // Exporting an asynchronous function that will be executed when the client is ready
 module.exports = async (client) => {
+  // Initialize the configured guild and its channel cache.
+  const guild = await client.fetchGuild(client.guildId);
+  await guild.fetchChannels();
+
   // Sending a log message indicating the bot has logged in, with the username styled in red and bold
   sendLog(
     null,
@@ -41,33 +44,29 @@ module.exports = async (client) => {
   // Checking if auto-buying incense is enabled in the configuration
   if (config.incense.AutoIncenseBuy == true) {
     // If enabled, sending a command in the specified channel to buy incense
-    const incenseChannel = client.channels.cache.get(
+    const incenseChannel = await client.resolveChannel(
       config.incense.IncenseChannel
     );
-
+    const responsePromise = incenseChannel.awaitMessage({
+      time: 5000,
+      errors: false,
+      filter: (msg) =>
+        msg.content.includes("You don't have enough shards for that!") ||
+        msg.content.includes(
+          "This channel already has an incense active! Please wait for it to end before purchasing another one."
+        ),
+    });
     await incenseChannel.send(
       `<@716390085896962058> incense buy 30m 10s -y`
     );
-
-    incenseChannel
-      .createMessageCollector({ time: 5000 })
-      .on("collect", async (msg) => {
-        if (msg.content.includes("You don't have enough shards for that!")) {
-          setSpamming(client.user.username, true);
-          setWaiting(client.user.username, false);
-        } else if (
-          msg.content.includes(
-            "This channel already has an incense active (paused)!"
-          )
-        ) {
-          await incenseChannel.send(
-            "<@716390085896962058> incense resume"
-          );
-          setSpamming(client.user.username, false);
-          setWaiting(client.user.username, false);
-        }
-      });
-  }
+    const msg = await responsePromise;
+    if (msg?.content.includes("You don't have enough shards for that!")) {
+      setSpamming(client.user.id, true);
+      setWaiting(client.user.id, false);
+    } else if (msg) {
+      setSpamming(client.user.id, false);
+      setWaiting(client.user.id, false);
+    }  }
 
   const { catchers } = require("../functions/createCatchers.js"); // Importing the catchers
   const catcher = catchers.find((catcher) => catcher.token === client.token); // Finding the correct catcher

@@ -1,3 +1,20 @@
+if (process.env.CATCHTWO_RUNTIME_READY !== "1") {
+  const { spawnSync } = require("child_process");
+  const result = spawnSync(process.execPath, process.argv.slice(1), {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      CATCHTWO_RUNTIME_READY: "1",
+      NODE_OPTIONS: [process.env.NODE_OPTIONS, "--no-deprecation"]
+        .filter(Boolean)
+        .join(" "),
+      TF_CPP_MIN_LOG_LEVEL: "2",
+    },
+  });
+
+  if (result.error) throw result.error;
+  process.exit(result.status ?? 1);
+}
 
 // Importing necessary functions
 const { createCatchers } = require("./src/functions/createCatchers.js");
@@ -14,7 +31,9 @@ const package = require("./package.json");
 // Main function to initialize and start the application
 async function main() {
   const figlet = require("figlet");
-  const gradient = await import('gradient-string').then(({default: gradient}) => gradient);
+  const gradient = await import("gradient-string").then(
+    ({ default: gradient }) => gradient,
+  );
 
   // Displaying the CatchTwo logo
   await figlet.text(
@@ -29,10 +48,10 @@ async function main() {
         console.log("Something went wrong...");
         console.dir(err);
         return;
-      } 
+      }
       console.log(gradient.fruit(data));
-    } 
-  );  
+    },
+  );
 
   // Extract version
   const version = package.version;
@@ -41,7 +60,7 @@ async function main() {
   console.log(
     chalk.bold.yellow(`[${"WELCOME".toUpperCase()}]`) +
       ` - ` +
-      chalk.yellow.bold(`Welcome to CatchTwo!`)
+      chalk.yellow.bold(`Welcome to CatchTwo!`),
   );
 
   // Log the current version with a nicer color
@@ -49,8 +68,8 @@ async function main() {
     chalk.bold.cyan(`[VERSION]`) +
       ` - ` +
       chalk.cyan(
-        `Version ${chalk.bold(version)}, by ${chalk.bold(`@kyan0045`)}`
-      )
+        `Version ${chalk.bold(version)}, by ${chalk.bold(`@kyan0045`)}`,
+      ),
   );
 
   // Sending a welcome message via webhook
@@ -66,7 +85,7 @@ async function main() {
     },
     thumbnail: {
       url: "https://res.cloudinary.com/dppthk8lt/image/upload/c_scale,h_50,w_64/v1719331169/catchtwo_bjvlqi.png",
-    },  
+    },
   });
 
   // Delayed execution to create catchers and log memory usage
@@ -79,12 +98,11 @@ async function main() {
 // Handling unhandled promise rejections
 process.on("unhandledRejection", (reason, p) => {
   // Ignoring specific errors
-  const ignoreErrors = [
-    "MESSAGE_ID_NOT_FOUND",
-    "INTERACTION_TIMEOUT",
-    "BUTTON_NOT_FOUND",
-  ];
-  if (ignoreErrors.includes(reason.code || reason.message)) return;
+  const ignoredMessages = ["No buttons found in message", "out of range"];
+  if (
+    reason?.fullError?.code === 10008 ||
+    ignoredMessages.some((message) => reason?.message?.includes(message))
+  ) return;
   // Logging unhandled rejections
   sendLog(undefined, `Unhandled Rejection`, "error");
   console.log(reason, p);
