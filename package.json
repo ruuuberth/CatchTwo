@@ -15,7 +15,8 @@
   "dependencies": {
     "@tensorflow/tfjs-backend-cpu": "4.22.0",
     "@tensorflow/tfjs-core": "4.22.0",
-    "@tensorflow/tfjs-layers": "4.22.0",    "axios": "^1.7.3",
+    "@tensorflow/tfjs-layers": "4.22.0",
+    "axios": "^1.7.3",
     "chalk": "^4.1.0",
     "date-and-time": "^3.1.1",
     "discord-self-lite": "^0.1.19",

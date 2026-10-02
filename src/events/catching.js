@@ -16,7 +16,10 @@ const {
   getSpamming,
   getWaiting,
 } = require("../utils/states.js");
-const { canonicalizeAiPokemonName } = require("../utils/aiPokemonNames.js");const data = require("../data/ai.json");
+const {
+  canonicalizeAiPokemonName,
+} = require("../utils/aiPokemonNames.js");
+const data = require("../data/ai.json");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
