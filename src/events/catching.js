@@ -53,7 +53,8 @@ async function loadAiDependencies() {
       };
     })();
 
-  return dependenciesLoadPromise;}
+  return dependenciesLoadPromise;
+}
 
 async function preprocessImage(url) {
   const { tf, sharp } = await loadAiDependencies();
@@ -63,7 +64,8 @@ async function preprocessImage(url) {
   });
   const imageBuffer = await sharp(Buffer.from(response.data))
     .resize(64, 64)
-    .toColourspace("srgb")    .removeAlpha()
+    .toColourspace("srgb")
+    .removeAlpha()
     .raw()
     .toBuffer();
 
@@ -199,7 +201,8 @@ module.exports = async (client, guildId, message) => {
                 errors: false,
                 filter: (msg) =>
                   msg.content.includes("That is the wrong pok\u00e9mon!"),
-              });              await message.channel.send(
+              });
+              await message.channel.send(
                 "<@716390085896962058> c " + pokemonRandom
               );
               const wrongMessage = await wrongMessagePromise;
@@ -326,7 +329,8 @@ module.exports = async (client, guildId, message) => {
             time: 5000,
             errors: false,
             filter: (msg) => msg.content.includes("That is the wrong pok\u00e9mon!"),
-          });          await message.channel.send(
+          });
+          await message.channel.send(
             "<@716390085896962058> c " + pokemonRandomLanguage
           );
         }
