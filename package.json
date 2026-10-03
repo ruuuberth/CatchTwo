@@ -1,6 +1,6 @@
 {
   "name": "catchtwo",
-  "version": "1.4.0-beta.3",
+  "version": "1.4.0-beta.5",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -10,18 +10,24 @@
     "start-app": "git fetch origin && git checkout -B main origin/main && git pull origin main && node --no-deprecation index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "kyan0045",
   "license": "ISC",
   "dependencies": {
-    "@tensorflow/tfjs": "4.22.0",
+    "@tensorflow/tfjs-backend-cpu": "4.22.0",
+    "@tensorflow/tfjs-core": "4.22.0",
+    "@tensorflow/tfjs-layers": "4.22.0",
     "axios": "^1.7.3",
     "chalk": "^4.1.0",
     "date-and-time": "^3.1.1",
-    "discord.js-selfbot-v13": "^3.4.6",
+    "discord-self-lite": "^0.1.19",
     "figlet": "^1.8.0",
     "fs-extra": "^11.2.0",
     "gradient-string": "^3.0.0",
-    "pokehint": "^1.4.10",
+    "pokehint": "^1.4.22",
     "sharp": "^0.33.5"
+  },
+  "allowScripts": {
+    "core-js@3.49.0": true,
+    "sharp@0.33.5": true
   }
 }

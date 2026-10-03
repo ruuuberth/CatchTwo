@@ -1,5 +1,5 @@
 // Import necessary modules and their functions
-const { solveHint, getImage, getName } = require("pokehint");
+const { solveHint, getName } = require("pokehint");
 
 // Import the config file
 const config = require("../../config.js");
@@ -16,82 +16,143 @@ const {
   getSpamming,
   getWaiting,
 } = require("../utils/states.js");
-const tf = require("@tensorflow/tfjs");
-const { loadLocalLayersModel } = require("../utils/tfModel.js");
 const {
   canonicalizeAiPokemonName,
 } = require("../utils/aiPokemonNames.js");
-const sharp = require("sharp");
 const data = require("../data/ai.json");
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+const modelData = require("../data/model/model.json");
 
 // Define global variables
 let model;
+let dependenciesLoadPromise;
+let modelLoadPromise;
 let hintMessages = ["h", "hint"];
 
-async function predict(url) {
-  if (!model) {
-    model = await loadLocalLayersModel(require("path").resolve("./src/data/model/model.json"));
-  }
-  let startTime = new Date().getTime();
-  const imageTensor = await preprocessImage(url);
-  const prediction = model.predict(imageTensor);
+async function loadAiDependencies() {
+  dependenciesLoadPromise =
+    dependenciesLoadPromise ||
+    (async () => {
+      const tf = require("@tensorflow/tfjs-core");
+      require("@tensorflow/tfjs-backend-cpu");
+      await tf.setBackend("cpu");
+      await tf.ready();
+      const warn = console.warn;
+      console.warn = () => {};
+      try {
+        tf.scalar(0).dispose();
+      } finally {
+        console.warn = warn;
+      }
+      return {
+        tf,
+        layers: require("@tensorflow/tfjs-layers"),
+        sharp: require("sharp"),
+      };
+    })();
 
-  const predictedIndex = prediction.argMax(1).dataSync()[0];
-
-  const keys = Object.keys(data); // Get all keys from the data object
-  const name = keys[predictedIndex]; // Get the key name at the specified index
-  const canonicalName = await canonicalizeAiPokemonName(name);
-
-  sendLog(
-    null,
-    "AI prediction took " + (new Date().getTime() - startTime) + "ms.",
-    "debug"
-  );
-  return canonicalName;
+  return dependenciesLoadPromise;
 }
 
 async function preprocessImage(url) {
+  const { tf, sharp } = await loadAiDependencies();
   const response = await axios({
     url,
     responseType: "arraybuffer",
   });
   const imageBuffer = await sharp(Buffer.from(response.data))
     .resize(64, 64)
+    .toColourspace("srgb")
     .removeAlpha()
     .raw()
     .toBuffer();
 
-  const imageTensor = tf.divNoNan(
-    tf.tensor3d(new Uint8Array(imageBuffer), [64, 64, 3]),
-    255
+  return tf.tidy(() => {
+    const decodedImage = tf.tensor3d(imageBuffer, [64, 64, 3], "int32");
+    const normalizedImage = tf.divNoNan(decodedImage, tf.scalar(255.0));
+    const expandedTensor = tf.expandDims(normalizedImage, 0);
+    return expandedTensor;
+  });
+}
+async function predict(url) {
+  const { tf, layers } = await loadAiDependencies();
+
+  if (!model) {
+    modelLoadPromise =
+      modelLoadPromise ||
+      layers.loadLayersModel(
+        tf.io.fromMemory({
+          modelTopology: modelData.modelTopology,
+          weightSpecs: modelData.weightsManifest[0].weights,
+          weightData: (() => {
+            const weights = fs.readFileSync(
+              path.resolve("src/data/model/weights.bin")
+            );
+            return weights.buffer.slice(
+              weights.byteOffset,
+              weights.byteOffset + weights.byteLength
+            );
+          })(),
+        })
+      );
+    model = await modelLoadPromise;
+  }
+  let startTime = new Date().getTime();
+  const imageTensor = await preprocessImage(url);
+
+  // Use tf.tidy to automatically dispose intermediate tensors
+  const predictedIndex = tf.tidy(() => {
+    const prediction = model.predict(imageTensor);
+    const argMaxTensor = tf.argMax(prediction, 1);
+    return argMaxTensor.dataSync()[0];
+  });
+
+  // Manually dispose the input tensor
+  imageTensor.dispose();
+
+  const keys = Object.keys(data); // Get all keys from the data object
+  const name = keys[predictedIndex]; // Get the key name at the specified index
+
+  // Log TensorFlow memory usage in debug mode
+  if (config.debug) {
+    const memory = tf.memory();
+    sendLog(
+      null,
+      `TF memory — tensors: ${memory.numTensors}, bytes: ${memory.numBytes}`,
+      "debug",
+    );
+  }
+
+  sendLog(
+    null,
+    "AI prediction took " + (new Date().getTime() - startTime) + "ms.",
+    "debug",
   );
-
-  const expandedTensor = tf.expandDims(imageTensor, 0);
-
-  return expandedTensor;
+  return (await canonicalizeAiPokemonName(name)) || name;
 }
 
 // Main function to handle message creation events
 module.exports = async (client, guildId, message) => {
   // Return if the bot is set to waiting
-  if (getWaiting(client.user.username) == true) return;
+  if (getWaiting(client.user.id) == true) return;
 
   // Check if the message is from the bot itself in the specified guild or if global catch is enabled and the guild is not blacklisted
   if (
     (config.behavior.Catching == true &&
       message.guild?.id == guildId &&
-      message.author.id == "716390085896962058") ||
+      message?.author.id == "716390085896962058") ||
     (config.globalSettings.GlobalCatch &&
-      message.author.id == "716390085896962058" &&
+      message?.author.id == "716390085896962058" &&
       !config.globalSettings.BlacklistedGuilds.includes(message.guild?.id))
   ) {
     // Handle wild Pokémon appearance
-    if (message.embeds[0]?.title?.includes("wild pokémon has appeared")) {
+    if (message?.embeds[0]?.title?.includes("wild pokémon has appeared")) {
       // Return if IncenseMode is off and the message includes "Incense"
       if (
         config.incense.IncenseMode == false &&
-        message.embeds[0]?.footer?.text?.includes("Incense")
+        message?.embeds[0]?.footer?.text?.includes("Incense")
       )
         return;
 
@@ -99,7 +160,7 @@ module.exports = async (client, guildId, message) => {
         sendLog(
           client.user.username,
           "AI enabled, trying to predict the pokémon.",
-          "debug"
+          "debug",
         );
         predict(message.embeds[0].image.url)
           .then(async (result) => {
@@ -111,8 +172,8 @@ module.exports = async (client, guildId, message) => {
               )
             ) {
               const shinyHunter = new ShinyHunter(config.hunting.HuntToken);
-              shinyHunter.login();
-              shinyHunter.catch(
+              await shinyHunter.login();
+              await shinyHunter.catch(
                 message.guild.id,
                 message.channel.id,
                 result
@@ -132,31 +193,30 @@ module.exports = async (client, guildId, message) => {
                 `[CapturePolicy] ${pokemonRandom} -> ${
                   allowed ? "allowed" : "blocked"
                 }`,
-                "debug"
+                "debug",
               );
 
-              checkIfWrong = await message.channel
-                .createMessageCollector({ time: 5000 })
-                .on("collect", async (msg) => {
-                  if (
-                    msg.content.includes("That is the wrong pokémon!")
-                  ) {
-                    checkIfWrong.stop();
-                    setTimeout(async () => {
-                      msg.channel.send(
-                        "<@716390085896962058> " +
-                          hintMessages[Math.round(Math.random())]
-                      );
-                    }, 500);
-                  }
-                });
+              const wrongMessagePromise = message.channel.awaitMessage({
+                time: 5000,
+                errors: false,
+                filter: (msg) =>
+                  msg.content.includes("That is the wrong pok\u00e9mon!"),
+              });
               await message.channel.send(
                 "<@716390085896962058> c " + pokemonRandom
               );
+              const wrongMessage = await wrongMessagePromise;
+              if (wrongMessage) {
+                await wait(500);
+                await wrongMessage.channel.send(
+                  "<@716390085896962058> " +
+                    hintMessages[Math.round(Math.random())]
+                );
+              }
             } else {
               message.channel.send(
                 "<@716390085896962058> " +
-                  hintMessages[Math.round(Math.random())]
+                  hintMessages[Math.round(Math.random())],
               );
             }
           })
@@ -165,12 +225,13 @@ module.exports = async (client, guildId, message) => {
             // Send a hint message if the prediction fails
 
             message.channel.send(
-              "<@716390085896962058> " + hintMessages[Math.round(Math.random())]
+              "<@716390085896962058> " +
+                hintMessages[Math.round(Math.random())],
             );
           });
       } else {
         message.channel.send(
-          "<@716390085896962058> " + hintMessages[Math.round(Math.random())]
+          "<@716390085896962058> " + hintMessages[Math.round(Math.random())],
         );
       }
 
@@ -180,8 +241,8 @@ module.exports = async (client, guildId, message) => {
         message.embeds[0]?.footer?.text?.includes("Incense")
       ) {
         // Log and manage spamming state based on incense detection
-        if (getSpamming(client.user.username) == true) {
-          setSpamming(client.user.username, false);
+        if (getSpamming(client.user.id) == true) {
+          setSpamming(client.user.id, false);
           sendLog(client.user.username, "Detected incense.", "incense");
         }
         // Handle the end of incense and possibly buy a new one
@@ -193,28 +254,29 @@ module.exports = async (client, guildId, message) => {
             sendLog(
               client.user.username,
               "Incense ran out, buying next one.",
-              "auto-incense"
+              "auto-incense",
             );
-            message.channel.send(
-              "<@716390085896962058> incense buy 30m 10s -y"
+            const responsePromise = message.channel.awaitMessage({
+              time: 5000,
+              errors: false,
+              filter: (msg) =>
+                msg.content.includes("You don't have enough shards for that!"),
+            });
+            await message.channel.send(
+              "<@716390085896962058> incense buy 30m 10s -y",
             );
-            await message.channel
-              .createMessageCollector({ time: 5000 })
-              .on("collect", async (msg) => {
-                if (
-                  msg.content.includes("You don't have enough shards for that!")
-                ) {
-                  setSpamming(client.user.username, true);
-                  setWaiting(client.user.username, false);
-                }
-              });
+            const response = await responsePromise;
+            if (response) {
+              setSpamming(client.user.id, true);
+              setWaiting(client.user.id, false);
+            }
           } else {
-            setSpamming(client.user.username, true);
-            setWaiting(client.user.username, false);
+            setSpamming(client.user.id, true);
+            setWaiting(client.user.id, false);
             sendLog(
               client.user.username,
               "Detected the end of the incense.",
-              "incense"
+              "incense",
             );
           }
         }
@@ -223,6 +285,7 @@ module.exports = async (client, guildId, message) => {
       // Handle hint-based Pokémon catching
       const pokemon = await solveHint(message);
       if (pokemon[0] && typeof pokemon[0] === "string") {
+        let wrongMessagePromise;
         let pokemonRandomLanguage = await getName({
           name: pokemon[0],
           inputLanguage: "English",
@@ -244,81 +307,84 @@ module.exports = async (client, guildId, message) => {
           `[CapturePolicy] ${pokemonRandomLanguage} -> ${
             allowed ? "allowed" : "blocked"
           }`,
-          "debug"
+          "debug",
         );
-
         // Check if the Pokémon is in the shiny hunting list
         if (
           config.hunting.HuntPokemons.map((huntName) =>
-            huntName.toLowerCase()
+            huntName.toLowerCase(),
           ).includes(pokemon[0]?.toLowerCase() || pokemon[1]?.toLowerCase())
         ) {
           const shinyHunter = new ShinyHunter(config.hunting.HuntToken);
-          shinyHunter.login();
-          shinyHunter.catch(message.guild.id, message.channel.id, pokemon[0]);
+          await shinyHunter.login();
+          wrongMessagePromise = message.channel.awaitMessage({
+            time: 5000,
+            errors: false,
+            filter: (msg) => msg.content.includes("That is the wrong pokémon!"),
+          });
+          await shinyHunter.catch(message.guild.id, message.channel.id, pokemon[0]);
         } else {
           // Attempt to catch the Pokémon based on the hint
+          wrongMessagePromise = message.channel.awaitMessage({
+            time: 5000,
+            errors: false,
+            filter: (msg) => msg.content.includes("That is the wrong pok\u00e9mon!"),
+          });
           await message.channel.send(
             "<@716390085896962058> c " + pokemonRandomLanguage
           );
         }
         // Handle incorrect catch attempts
-        checkIfWrong = await message.channel
-          .createMessageCollector({ time: 5000 })
-          .on("collect", async (msg) => {
-            if (msg.content.includes("That is the wrong pokémon!")) {
-              checkIfWrong.stop();
+        const wrongMessage = await wrongMessagePromise;
+        if (wrongMessage) {
+          if (!pokemon[1]) {
+            return wrongMessage.channel.send(
+              "<@716390085896962058> " +
+                hintMessages[Math.round(Math.random())]
+            );
+          }
+          const secondPokemonName =
+            (await getName({ name: pokemon[1], inputLanguage: "English" })) ||
+            pokemon[1];
 
-              const secondPokemon = await getName({
-                name: pokemon[1],
-                inputLanguage: "English",
-              });
+          const secondAllowed = shouldCapture(
+            config.capturePolicy,
+            message.guild.id,
+            message.channel.id,
+            secondPokemonName
+          );
 
-              const secondPokemonName = secondPokemon || pokemon[1];
+          sendLog(
+            client.user.username,
+            `[CapturePolicy] ${secondPokemonName} -> ${
+              secondAllowed ? "allowed" : "blocked"
+            }`,
+            "debug",
+          );
 
-              const secondAllowed = shouldCapture(
-                config.capturePolicy,
-                message.guild.id,
-                message.channel.id,
-                secondPokemonName
-              );
-
-              sendLog(
-                client.user.username,
-                `[CapturePolicy] ${secondPokemonName} -> ${
-                  secondAllowed ? "allowed" : "blocked"
-                }`,
-                "debug"
-              );
-
-              await msg.channel.send(
-                "<@716390085896962058> c " + pokemon[1]
-              );
-
-              checkIfWrong2 = await msg.channel
-                .createMessageCollector({ time: 5000 })
-                .on("collect", async (msg) => {
-                  if (
-                    msg.content.includes("That is the wrong pokémon!") &&
-                    getSpamming(client.user.username) == true
-                  ) {
-                    checkIfWrong2.stop();
-
-                    msg.channel.send(
-                      "<@716390085896962058> " +
-                        hintMessages[Math.round(Math.random())]
-                    );
-                  }
-                });
-            }
-          });
+          const secondWrongMessagePromise = wrongMessage.channel.awaitMessage({
+            time: 5000,
+            errors: false,
+            filter: (msg) =>
+              msg.content.includes("That is the wrong pok\u00e9mon!"),          });
+          await wrongMessage.channel.send(
+            "<@716390085896962058> c " + pokemon[1]
+          );
+          const secondWrongMessage = await secondWrongMessagePromise;
+          if (secondWrongMessage && getSpamming(client.user.id) == true) {
+            await secondWrongMessage.channel.send(
+              "<@716390085896962058> " +
+                hintMessages[Math.round(Math.random())]
+            );
+          }
+        }
       }
     } else if (message.content.startsWith("Please pick a starter pokémon")) {
       // Handle starter Pokémon selection
       let starters = ["bulbasaur", "charmander", "squirtle"];
       await wait(300);
       await message.channel.send(
-        "<@716390085896962058> pick " + starters[randomInteger(0, 2)]
+        "<@716390085896962058> pick " + starters[randomInteger(0, 2)],
       );
     } else if (
       message?.embeds[0]?.footer &&
@@ -326,11 +392,10 @@ module.exports = async (client, guildId, message) => {
       message?.components[0]?.components[0]
     ) {
       // Handle terms acceptance and initial setup
-      const messages = await message.channel.messages
-        .fetch({ limit: 2, around: message.id })
+      const messages = await message.channel
+        .fetchMessages({ limit: 2, around: message.id })
         .catch(() => null);
-      const newMessage = Array.from(messages.values());
-      [...messages.values()];
+      const newMessage = messages || [];
       if (!newMessage[1]?.content.includes("pick")) return;
       message.clickButton();
       await wait(3000);
@@ -340,32 +405,29 @@ module.exports = async (client, guildId, message) => {
       await wait(2000);
       message.channel.send("<@716390085896962058> order iv");
     } else if (
-      config.logging.LogCatches &&
       message.content.includes(
         "Congratulations <@" + client.user.id + ">! You caught"
       )
     ) {
       recordActivity(client.user.id);
 
-      // Log successful catches
-      if (config.logging.LogCatches) {
-        let match = message.content.match(
-          /Level (\d+) ([^<]+)(<:[^>]+>) \(([^)]+%)\)/
-        );
-        const [, level, unTrimmedName, gender, iv] = match;
-        const name = unTrimmedName.trim();
-        const shiny = message.content.includes("✨");
-
-        sendCatch(
-          client.user.username,
-          name,
-          level,
-          iv,
-          gender,
-          shiny,
-          await getImage(name, shiny)
-        );
-      }
+      const match = message.content.match(
+        /Level (\d+) ([^<]+)(<:[^>]+>) \(([^)]+%)\)/
+      );
+      const [, level, unTrimmedName, gender, iv] = match;
+      const name = unTrimmedName.trim();
+      const shiny = message.content.includes("\u2728");
+      const gigantamax = message.content.includes("Gigantamax");
+      await sendCatch(
+        client.user.id,
+        client.user.username,
+        name,
+        level,
+        iv,
+        gender,
+        shiny,
+        gigantamax
+      );
     }
   }
 };
