@@ -6,7 +6,6 @@ const config = require("../../config.js");
 
 // Import necessary functions
 const { wait, randomInteger } = require("../utils/utils.js");
-const { recordActivity } = require("../utils/accountActivity.js");
 const { shouldCapture } = require("../utils/capturePolicy.js");
 const { ShinyHunter } = require("../classes/shinyHunter.js");
 const { sendLog, sendCatch } = require("../functions/logging.js");
@@ -178,7 +177,7 @@ module.exports = async (client, guildId, message) => {
                 message.channel.id,
                 result
               );
-            } else if (result[0] && typeof result[0] === "string") {
+            } else if (result) {
               const pokemonRandom = result;
 
               const allowed = shouldCapture(
@@ -409,8 +408,6 @@ module.exports = async (client, guildId, message) => {
         "Congratulations <@" + client.user.id + ">! You caught"
       )
     ) {
-      recordActivity(client.user.id);
-
       const match = message.content.match(
         /Level (\d+) ([^<]+)(<:[^>]+>) \(([^)]+%)\)/
       );
