@@ -37,11 +37,10 @@ class Catcher {
         createAccountStats(this.client.user.id);
       })
       .catch((error) => {
-        sendLog(
-          null,
-          `Failed to login to token: ${this.token}\n\t\t ${error}`,
-          "error"
-        );
+        // Log only the first 12 chars of the token (enough to identify which
+        // line in tokens.txt failed) — never leak the full secret to logs.
+        const tokenHint = String(this.token).slice(0, 12) + "…";
+        sendLog(null, `Failed to login to token: ${tokenHint}\n\t\t ${error}`, "error");
       });
     clients.push(this.client);
   }
