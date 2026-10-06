@@ -117,7 +117,6 @@ process.on("uncaughtException", (e, o) => {
 
 // Handling multiple promise resolutions
 process.on("multipleResolves", (type, promise, reason) => {
-  // Logging multiple resolutions  sendLog(undefined, `Multiple Resolves`, "error");
   console.log(type, promise, reason);
 });
 
