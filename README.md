@@ -17,8 +17,8 @@
 
   <p align="center">
   <a href="https://discord.gg/tXa2Hw5jHy"><img src="https://img.shields.io/discord/1133853334944632832?label=Discord&logo=discord&logoColor=white&style=for-the-badge" alt="Discord"></a>
-  <a href="https://github.com/kyan0045/CatchTwo/stargazers"><img src="https://img.shields.io/github/stars/kyan0045/CatchTwo?style=for-the-badge&logo=github&color=blue" alt="Stars"></a>
-  <a href="https://github.com/kyan0045/CatchTwo/releases"><img src="https://img.shields.io/github/v/release/kyan0045/CatchTwo?style=for-the-badge&logo=github" alt="Release"></a>
+  <a href="https://github.com/ruuuberth/CatchTwo/stargazers"><img src="https://img.shields.io/github/stars/ruuuberth/CatchTwo?style=for-the-badge&logo=github&color=blue" alt="Stars"></a>
+  <a href="https://github.com/ruuuberth/CatchTwo/releases"><img src="https://img.shields.io/github/v/release/ruuuberth/CatchTwo?style=for-the-badge&logo=github" alt="Release"></a>
   <a href="https://www.nodejs.org/"><img src="https://img.shields.io/badge/node.js-339933?style=for-the-badge&logo=Node.js&logoColor=white" alt="made-with-python"></a>
 </p>
 
@@ -76,33 +76,33 @@
 - Download [Git](https://git-scm.com/downloads)
 
 ```bash
-# 1. Clone the repository (v1.4-beta branch)
-git clone -b v1.4-beta --single-branch https://github.com/kyan0045/catchtwo.git
+# 1. Clone this fork (lands on the default branch, arm64-v1.4-beta.3)
+git clone https://github.com/ruuuberth/CatchTwo.git
 
 # 2. Navigate to the directory
-cd catchtwo
+cd CatchTwo
 
 # 3. Install dependencies
 npm install
 
 # 4. Configure the bot (config.js & tokens.txt)
 
-# 5. Start CatchTwo
-npm start 
+# 5. Start CatchTwo (cross-platform)
+node --no-deprecation index.js
 # OR
-node .
+npm start
 ```
 <!-- Support Section -->
 <h2 align="">Support</h2>
 <p align="">
 Need help? Join our <a href="https://discord.gg/tXa2Hw5jHy">Discord community</a> for support, updates, and feature requests.<br>
-Alternatively, head over to the <a href="https://github.com/kyan0045/CatchTwo/discussions">Discussions</a> tab!
+Alternatively, head over to the <a href="https://github.com/ruuuberth/CatchTwo/discussions">Discussions</a> tab!
 </p>
 
 <!-- Configurations Section -->
 <h2 align="">Configurations</h2>
 <p align="">
-  Customize CatchTwo to your liking with these powerful configuration options. All options are to be set in <code>config.json</code>:
+  Customize CatchTwo to your liking with these powerful configuration options. All options are to be set in <code>config.js</code>:
 </p>
 
 | Category          | Name                | Type      | Default Value                                         | Description                                                                                                                                                                |
@@ -126,6 +126,12 @@ Alternatively, head over to the <a href="https://github.com/kyan0045/CatchTwo/di
 | **Hunting** | `HuntPokemons`      | `Array`   | `["rayquaza", "solosis"]`| Lists the names of Pokémon to hunt, this means your HuntToken will catch these pokemon.|
 |                   | `HuntToken`         | `String`  | `""`| Specifies the token to use for hunting. This should be a different token than your main bot token.|
 | **Debug**         | `debug`             | `Boolean` | `true`| Enables or disables debug mode. When set to `true`, the bot will output additional information for debugging purposes.     
+
+<!-- Captcha Solving Security Note -->
+<h2 align="">Security: Captcha Solving</h2>
+<p align="">
+  ⚠️ <b>Read before enabling <code>captchaSolving.key</code></b> (in <code>config.js</code>): when a captcha-solving API key is configured, the bot transmits your <b>full Discord account token</b> to <code>captchasolver.kyanbosman.com</code>, a third-party service run by the upstream author (see <code>src/events/misc.js:141-157</code>). Anyone operating that endpoint could take over your account. Only enable captcha solving if you fully trust that endpoint; otherwise leave the key empty.
+</p>
 
 <!-- Commands Section -->
 <h2 align="">Commands</h2>
@@ -174,5 +180,5 @@ CatchTwo is a community-driven project, and we welcome contributions of all kind
 <!-- License -->
 <h2 align="">License</h2>
 <p align="">
-CatchTwo is released under a <a href="https://github.com/kyan0045/CatchTwo/blob/main/LICENSE">custom license</a>.
+CatchTwo is released under a <a href="https://github.com/ruuuberth/CatchTwo/blob/arm64-v1.4-beta.3/LICENSE">custom license</a>. This repository is a fork of <a href="https://github.com/kyan0045/CatchTwo">kyan0045/CatchTwo</a>.
 </p>
