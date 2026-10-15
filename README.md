@@ -93,6 +93,33 @@ npm start
 ```
 
 > **Auto-restart:** `start.bat` was removed — run the bot under a process manager (e.g. `pm2 start index.js --name catchtwo`, or a systemd unit on Linux) — tracked in [#17](https://github.com/ruuuberth/CatchTwo/issues/17).
+>
+> **Boot persistence:** make the manager survive reboots:
+>
+> ```bash
+> # pm2
+> pm2 startup   # prints & installs the boot hook
+> pm2 save      # freezes the current process list for restarts
+> ```
+>
+> Or a minimal systemd unit (`/etc/systemd/system/catchtwo.service`):
+>
+> ```ini
+> [Unit]
+> Description=CatchTwo
+> After=network.target
+>
+> [Service]
+> WorkingDirectory=/path/to/CatchTwo
+> ExecStart=/usr/bin/node index.js
+> Restart=always
+> RestartSec=5
+>
+> [Install]
+> WantedBy=multi-user.target
+> ```
+>
+> Then: `sudo systemctl enable --now catchtwo`.
 <!-- Support Section -->
 <h2 align="">Support</h2>
 <p align="">
