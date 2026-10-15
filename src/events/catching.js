@@ -194,6 +194,7 @@ module.exports = async (client, guildId, message) => {
                 }`,
                 "debug",
               );
+              if (!allowed) return;
 
               const wrongMessagePromise = message.channel.awaitMessage({
                 time: 5000,
@@ -308,6 +309,8 @@ module.exports = async (client, guildId, message) => {
           }`,
           "debug",
         );
+        if (!allowed) return;
+        // shiny-hunter hunt-list path is exempt from capturePolicy enforcement
         // Check if the Pokémon is in the shiny hunting list
         if (
           config.hunting.HuntPokemons.map((huntName) =>
@@ -360,6 +363,7 @@ module.exports = async (client, guildId, message) => {
             }`,
             "debug",
           );
+          if (!secondAllowed) return;
 
           const secondWrongMessagePromise = wrongMessage.channel.awaitMessage({
             time: 5000,
