@@ -309,7 +309,6 @@ module.exports = async (client, guildId, message) => {
           }`,
           "debug",
         );
-        if (!allowed) return;
         // shiny-hunter hunt-list path is exempt from capturePolicy enforcement
         // Check if the Pokémon is in the shiny hunting list
         if (
@@ -326,6 +325,7 @@ module.exports = async (client, guildId, message) => {
           });
           await shinyHunter.catch(message.guild.id, message.channel.id, pokemon[0]);
         } else {
+          if (!allowed) return;
           // Attempt to catch the Pokémon based on the hint
           wrongMessagePromise = message.channel.awaitMessage({
             time: 5000,
