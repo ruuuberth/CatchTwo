@@ -1,9 +1,9 @@
 function shouldCapture(policy, serverId, channelId, pokemonName) {
   const server = policy?.servers?.[serverId];
-  if (!server) return false;
+  if (!server) return true;
 
   const channel = server.channels?.[channelId];
-  if (!channel) return false;
+  if (!channel) return true;
 
   const normalizedPokemon = String(pokemonName ?? "").trim().toLowerCase();
   if (!normalizedPokemon) return false;
