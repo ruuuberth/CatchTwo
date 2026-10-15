@@ -8,3 +8,5 @@
 *.nix
 config.js
 tokens.txt
+!package-lock.json
+!package.json
