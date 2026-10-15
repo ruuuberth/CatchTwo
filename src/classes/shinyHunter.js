@@ -30,7 +30,10 @@ class ShinyHunter {
       .then(() => {
         const key = spawnedPokemon.toLowerCase();
         this.pokemon[key] = (this.pokemon[key] || 0) + 1;
-      });
+      })
+      .catch((error) =>
+        console.error(`shinyHunter catch send failed: ${error}`)
+      );
   }
 }
 
