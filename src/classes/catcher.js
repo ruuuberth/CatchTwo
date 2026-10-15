@@ -38,14 +38,15 @@ class Catcher {
         createAccountStats(this.client.user.id);
       })
       .catch((error) => {
-        // Line number in tokens.txt identifies the failing entry unambiguously
-        // (12-char prefixes can collide, e.g. mfa. or same account family);
-        // the prefix stays as a visual cross-check. Never log the full secret.
-        const tokenHint = String(this.token).slice(0, 12) + "…";
-        const where = this.lineNumber
-          ? ` (tokens.txt line ${this.lineNumber})`
-          : "";
-        sendLog(null, `Failed to login to token${where}: ${tokenHint}\n\t\t ${error}`, "error");
+        // Entry number (order in tokens.txt or TOKENS env, 1-based) identifies
+        // the failing account; the 12-char prefix stays as a visual cross-check
+        // (it can collide). Never log the full secret: the raw error text is
+        // third-party output, so redact the token from it too.
+        const raw = String(this.token);
+        const tokenHint = raw.slice(0, 12) + "…";
+        const where = this.lineNumber ? ` (entry ${this.lineNumber})` : "";
+        const safeError = raw ? String(error).replaceAll(raw, "[REDACTED]") : String(error);
+        sendLog(null, `Failed to login to token${where}: ${tokenHint}\n\t\t ${safeError}`, "error");
       });
     clients.push(this.client);
   }
