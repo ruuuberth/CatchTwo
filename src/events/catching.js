@@ -309,7 +309,8 @@ module.exports = async (client, guildId, message) => {
           }`,
           "debug",
         );
-        // shiny-hunter hunt-list path is exempt from capturePolicy enforcement
+        // shiny-hunter hunt-list path is exempt from capturePolicy enforcement:
+        // the log above may say "blocked" but the shiny-hunter still proceeds
         // Check if the Pokémon is in the shiny hunting list
         if (
           config.hunting.HuntPokemons.map((huntName) =>
