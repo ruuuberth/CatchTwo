@@ -21,8 +21,8 @@ jobs:
         run: |
           find . -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -n1 node --check
 
-      - name: Install dependencies (verifies package.json resolves)
-        run: npm install --no-audit --no-fund
+      - name: Install dependencies from lockfile (verifies package.json resolves)
+        run: npm ci --no-audit --no-fund
 
       - name: Verify core deps load
         run: node -e "require('pokehint'); require('@tensorflow/tfjs-core'); require('sharp'); console.log('core deps OK')"
