@@ -213,25 +213,31 @@ module.exports = async (client, guildId, message) => {
                 );
               }
             } else {
-              message.channel.send(
-                "<@716390085896962058> " +
-                  hintMessages[Math.round(Math.random())],
-              );
+              message.channel
+                .send(
+                  "<@716390085896962058> " +
+                    hintMessages[Math.round(Math.random())],
+                )
+                .catch((error) => console.error(error));
             }
           })
           .catch((error) => {
             console.error(error);
             // Send a hint message if the prediction fails
 
-            message.channel.send(
-              "<@716390085896962058> " +
-                hintMessages[Math.round(Math.random())],
-            );
+            message.channel
+              .send(
+                "<@716390085896962058> " +
+                  hintMessages[Math.round(Math.random())],
+              )
+              .catch((err) => console.error(err));
           });
       } else {
-        message.channel.send(
-          "<@716390085896962058> " + hintMessages[Math.round(Math.random())],
-        );
+        message.channel
+          .send(
+            "<@716390085896962058> " + hintMessages[Math.round(Math.random())],
+          )
+          .catch((error) => console.error(error));
       }
 
       // Handle incense-specific logic
@@ -396,13 +402,19 @@ module.exports = async (client, guildId, message) => {
         .catch(() => null);
       const newMessage = messages || [];
       if (!newMessage[1]?.content.includes("pick")) return;
-      message.clickButton();
+      message.clickButton().catch((error) => console.error(error));
       await wait(3000);
-      message.channel.send("<@716390085896962058> i");
+      message.channel
+        .send("<@716390085896962058> i")
+        .catch((error) => console.error(error));
       await wait(2000);
-      message.channel.send("<@716390085896962058> sh solosis");
+      message.channel
+        .send("<@716390085896962058> sh solosis")
+        .catch((error) => console.error(error));
       await wait(2000);
-      message.channel.send("<@716390085896962058> order iv");
+      message.channel
+        .send("<@716390085896962058> order iv")
+        .catch((error) => console.error(error));
     } else if (
       message.content.includes(
         "Congratulations <@" + client.user.id + ">! You caught"
