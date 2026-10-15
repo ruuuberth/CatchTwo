@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: [arm64-v1.4-beta.3] # push directo a la default; PRs vía pull_request
   pull_request:
 
 jobs:
